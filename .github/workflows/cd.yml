@@ -1,12 +1,12 @@
 name: CD
 
-# Despliegue continuo: al mezclar a main se ejecuta `dbt build` contra el
+# Despliegue continuo: al mezclar a master se ejecuta `dbt build` contra el
 # Snowflake de producción usando el Environment "produccion" de GitHub
 # (sus Secrets solo están disponibles para este job, y el Environment puede
 # exigir aprobación manual de un revisor antes de correr).
 on:
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:
 
 permissions:
