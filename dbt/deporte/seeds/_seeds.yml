@@ -1,0 +1,33 @@
+version: 2
+
+seeds:
+  - name: jugadores
+    description: >
+      Catálogo maestro del plantel del Club Deportivo SQ (lo mantiene la
+      secretaría técnica). Es la referencia contra la que se valida que todo
+      jugador_id que llega en los archivos GPS exista en el club.
+    meta:
+      owner: secretaria_tecnica
+    columns:
+      - name: jugador_id
+        tests: [unique, not_null]
+      - name: posicion
+        tests:
+          - accepted_values:
+              values: ["POR", "DEF", "MED", "DEL"]
+      - name: dorsal
+        tests: [unique]
+
+  - name: tribunas
+    description: Aforo oficial por tribuna del Estadio SQ (resolución municipal vigente).
+    meta:
+      owner: gerencia_comercial
+    columns:
+      - name: tribuna
+        tests: [unique, not_null]
+      - name: capacidad
+        tests:
+          - not_null
+          - valor_en_rango:
+              minimo: 1
+              maximo: 50000

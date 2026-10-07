@@ -1,0 +1,89 @@
+name: CI
+
+# Se ejecuta en cada Pull Request (y en cada push a main). La Branch
+# Protection Rule de main exige que estos checks pasen antes del merge.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AIRFLOW_VERSION: "2.10.5"
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  lint-y-tests-unitarios:
+    name: Lint + tests de lógica de negocio
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - name: Ruff (lint + formato)
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: Pytest (lógica de negocio)
+        run: pytest tests/unit -v
+
+  integridad-dags:
+    name: Integridad de DAGs (Airflow)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Instalar Airflow con constraints oficiales
+        run: |
+          CONSTRAINTS="https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-${PYTHON_VERSION}.txt"
+          pip install "apache-airflow[amazon,sftp,mysql,snowflake,http]==${AIRFLOW_VERSION}" -r requirements.txt --constraint "$CONSTRAINTS"
+          pip install -r requirements-dev.txt
+      - name: Pytest (DAGs)
+        env:
+          AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+          AIRFLOW__CORE__UNIT_TEST_MODE: "true"
+        run: |
+          airflow db migrate
+          pytest tests/dags -v
+
+  dbt-parse:
+    name: dbt parse (sin conexión a Snowflake)
+    runs-on: ubuntu-latest
+    env:
+      # Valores ficticios: `dbt parse` valida el proyecto sin conectarse.
+      SNOWFLAKE_ACCOUNT: ci-sin-conexion
+      SNOWFLAKE_USER: ci
+      SNOWFLAKE_PASSWORD: ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install -r requirements-dbt.txt
+      - name: dbt parse
+        working-directory: dbt/deporte
+        run: dbt parse --profiles-dir .
+
+  docker-compose:
+    name: docker compose config + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar docker-compose.yaml con la plantilla .env.example
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+      - name: Construir la imagen de Airflow
+        run: docker compose build airflow-scheduler

@@ -1,0 +1,51 @@
+name: CD
+
+# Despliegue continuo: al mezclar a main se ejecuta `dbt build` contra el
+# Snowflake de producción usando el Environment "produccion" de GitHub
+# (sus Secrets solo están disponibles para este job, y el Environment puede
+# exigir aprobación manual de un revisor antes de correr).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dbt-build-produccion:
+    name: dbt build en Snowflake (producción)
+    runs-on: ubuntu-latest
+    # Se activa creando la variable de repositorio CD_SNOWFLAKE_HABILITADO=true
+    # una vez configurados los Secrets (ver docs/ci_cd.md).
+    if: vars.CD_SNOWFLAKE_HABILITADO == 'true'
+    environment: produccion
+    env:
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+      SNOWFLAKE_ROLE: DEPORTE_PIPELINE_ROLE
+      SNOWFLAKE_WAREHOUSE: DEPORTE_WH
+      SNOWFLAKE_DATABASE: DEPORTE_DB
+      SNOWFLAKE_SCHEMA: ANALYTICS
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements-dbt.txt
+      - name: dbt build (seeds + modelos + tests)
+        working-directory: dbt/deporte
+        run: |
+          dbt deps --profiles-dir .
+          dbt build --profiles-dir . --fail-fast
+      - name: dbt docs generate (catálogo y linaje)
+        working-directory: dbt/deporte
+        run: dbt docs generate --profiles-dir .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dbt-docs
+          path: |
+            dbt/deporte/target/index.html
+            dbt/deporte/target/manifest.json
+            dbt/deporte/target/catalog.json

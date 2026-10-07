@@ -1,0 +1,27 @@
+version: 2
+
+sources:
+  - name: raw
+    description: >
+      Capa RAW en Snowflake. La carga Airflow (DAG deporte_ingesta_diaria)
+      tal cual llegó de cada fuente, todo como texto, más columnas de linaje
+      (_LOTE_ID, _CARGADO_EN). Antes de llegar aquí los datos pasan por MinIO.
+    database: "{{ env_var('SNOWFLAKE_DATABASE', 'DEPORTE_DB') }}"
+    schema: RAW
+    loaded_at_field: "try_to_timestamp_ntz(_cargado_en, 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')"
+    freshness:
+      warn_after: {count: 30, period: hour}
+      error_after: {count: 54, period: hour}
+    tables:
+      - name: api_partidos
+        identifier: API_PARTIDOS
+        description: Partidos de la API football-data.org v4 (una fila por partido y extracción).
+        meta: {owner: analitica_deportiva, origen: "API REST football-data.org"}
+      - name: gps_carga_fisica
+        identifier: GPS_CARGA_FISICA
+        description: Carga física por jugador y sesión, desde los CSV del proveedor GPS (SFTP).
+        meta: {owner: rendimiento_fisico, origen: "SFTP proveedor GPS"}
+      - name: taquilla_ventas
+        identifier: TAQUILLA_VENTAS
+        description: Ventas de entradas extraídas incrementalmente del MySQL heredado de taquilla.
+        meta: {owner: gerencia_comercial, origen: "MySQL on-premise taquilla"}

@@ -1,0 +1,23 @@
+jugador_id,nombre,posicion,dorsal,fecha_nacimiento
+J001,Renzo Huamán,POR,1,1995-03-14
+J002,Carlos Ccori,POR,12,2001-07-02
+J003,Mateo Quispe,DEF,2,1998-11-21
+J004,Alonso Vargas,DEF,3,1996-01-30
+J005,Gabriel Condori,DEF,4,2000-05-17
+J006,Joaquín Paredes,DEF,5,1997-09-08
+J007,Bruno Mamani,DEF,13,2002-02-25
+J008,Sebastián Rojas,DEF,15,1999-12-03
+J009,Iván Tupa,DEF,22,2003-06-11
+J010,Diego Apaza,MED,6,1997-04-19
+J011,Luis Choque,MED,8,1999-08-27
+J012,Franco Ramos,MED,10,1996-10-05
+J013,Santiago Yupanqui,MED,14,2001-01-13
+J014,Rodrigo Ticona,MED,16,2000-03-29
+J015,André Salazar,MED,18,1998-07-07
+J016,Kevin Pari,MED,20,2004-09-15
+J017,Josué Calderón,DEL,7,1997-05-22
+J018,Emilio Inca,DEL,9,1995-12-18
+J019,Piero Cusi,DEL,11,2002-04-04
+J020,Héctor Nina,DEL,17,1999-02-10
+J021,Martín Huanca,DEL,19,2003-11-28
+J022,Adrián Puma,DEL,21,2000-08-16

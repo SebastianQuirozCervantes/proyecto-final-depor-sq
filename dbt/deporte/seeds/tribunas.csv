@@ -1,0 +1,5 @@
+tribuna,capacidad,descripcion
+OCCIDENTE,6000,Tribuna principal con palcos y zona de prensa
+ORIENTE,9000,Tribuna lateral general
+NORTE,7000,Cabecera popular norte
+SUR,7000,Cabecera popular sur (barra local)

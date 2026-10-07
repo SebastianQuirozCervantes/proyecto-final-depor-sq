@@ -1,0 +1,30 @@
+version: 2
+
+# Las exposures documentan QUIÉN consume los marts: dbt las incluye en el
+# grafo de linaje (dbt docs), igual que el linaje de OpenMetadata (Clase 9).
+exposures:
+  - name: reporte_diario_cuerpo_tecnico
+    label: Reporte diario del cuerpo técnico
+    type: analysis
+    maturity: medium
+    description: >
+      Reporte en Markdown que el DAG deporte_transformacion_dbt deja cada día en
+      s3://deporte-reportes/diario/ con los últimos partidos y las alertas de riesgo.
+    depends_on:
+      - ref('fct_rendimiento_partido')
+      - ref('mart_riesgo_lesion')
+    owner:
+      name: Equipo de datos del club
+      email: datos@clubSQ.example
+
+  - name: dashboard_gerencia_comercial
+    label: Dashboard de taquilla y rendimiento
+    type: dashboard
+    maturity: low
+    description: Dashboard de asistencia, recaudación y puntos por partido.
+    depends_on:
+      - ref('fct_rendimiento_partido')
+      - ref('mart_tabla_posiciones')
+    owner:
+      name: Gerencia comercial
+      email: comercial@clubSQ.example

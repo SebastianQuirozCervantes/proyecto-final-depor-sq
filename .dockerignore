@@ -1,0 +1,7 @@
+.git
+.env
+logs
+data
+dbt/deporte/target
+dbt/deporte/logs
+**/__pycache__

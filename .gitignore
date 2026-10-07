@@ -1,0 +1,32 @@
+# Secretos: NUNCA se suben al repositorio
+.env
+*.pem
+*.key
+
+# Airflow
+logs/
+airflow.db
+airflow-webserver.pid
+standalone_admin_password.txt
+
+# dbt
+dbt/deporte/target/
+dbt/deporte/dbt_packages/
+dbt/deporte/logs/
+dbt/deporte/.user.yml
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Datos locales de los simuladores
+data/
+
+# Editores / SO
+.idea/
+.vscode/
+.DS_Store

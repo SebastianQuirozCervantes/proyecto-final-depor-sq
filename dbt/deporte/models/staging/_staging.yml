@@ -1,0 +1,72 @@
+version: 2
+
+models:
+  - name: stg_api__partidos
+    description: Un registro por partido (versión más reciente), con tipos y fecha en hora de Lima.
+    meta: {owner: analitica_deportiva, capa: staging}
+    columns:
+      - name: partido_id
+        description: Id del partido en la API.
+        tests: [unique, not_null]
+      - name: codigo_competicion
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["LAN", "CPA"]
+              config:
+                # Si se cambia la Variable a otra liga real (PL, PD...), avisa sin bloquear.
+                severity: warn
+      - name: estado
+        tests:
+          - accepted_values:
+              values: ["SCHEDULED", "TIMED", "IN_PLAY", "PAUSED", "FINISHED", "POSTPONED", "SUSPENDED", "CANCELLED", "AWARDED"]
+      - name: fecha_partido
+        tests: [not_null]
+      - name: goles_local
+        tests:
+          - valor_en_rango: {minimo: 0, maximo: 20}
+
+  - name: stg_gps__carga_fisica
+    description: Una fila por jugador, día y tipo de sesión, con la carga interna sRPE.
+    meta: {owner: rendimiento_fisico, capa: staging}
+    columns:
+      - name: sesion_jugador_id
+        tests: [unique, not_null]
+      - name: jugador_id
+        description: Debe existir en el catálogo maestro del plantel.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('jugadores')
+              field: jugador_id
+      - name: tipo_sesion
+        tests:
+          - accepted_values:
+              values: ["ENTRENAMIENTO", "PARTIDO", "RECUPERACION"]
+      - name: rpe
+        description: Esfuerzo percibido (escala de Borg CR-10).
+        tests:
+          - not_null
+          - valor_en_rango: {minimo: 1, maximo: 10}
+      - name: carga_interna_ua
+        tests:
+          - valor_en_rango: {minimo: 0, maximo: 1500}
+
+  - name: stg_taquilla__ventas
+    description: Una fila por venta (último estado), con su importe.
+    meta: {owner: gerencia_comercial, capa: staging}
+    columns:
+      - name: venta_id
+        tests: [unique, not_null]
+      - name: tribuna
+        tests:
+          - relationships:
+              to: ref('tribunas')
+              field: tribuna
+      - name: estado
+        tests:
+          - accepted_values:
+              values: ["PAGADA", "ANULADA"]
+      - name: importe
+        tests:
+          - valor_en_rango: {minimo: 0, maximo: 1000000}

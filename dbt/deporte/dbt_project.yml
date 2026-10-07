@@ -1,0 +1,48 @@
+name: deporte
+version: "1.0.0"
+config-version: 2
+profile: deporte
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+analysis-paths: ["analyses"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  # Id del Club Deportivo SQ en la API de partidos.
+  club_id: 100
+  # Días mínimos de historia para que el ACWR sea confiable.
+  dias_minimos_acwr: 21
+
+models:
+  deporte:
+    +query_tag: deporte_dbt
+    staging:
+      +schema: staging
+      +materialized: view
+    intermediate:
+      +schema: intermediate
+      +materialized: view
+    marts:
+      +schema: marts
+      # Tablas permanentes: conservan Time Travel para recuperar un mart si
+      # una corrida lo deja mal (ver snowflake/operacion.sql).
+      +materialized: table
+
+seeds:
+  deporte:
+    +schema: seeds
+    jugadores:
+      +column_types:
+        dorsal: number
+        fecha_nacimiento: date
+    tribunas:
+      +column_types:
+        capacidad: number
+
+tests:
+  deporte:
+    +store_failures: false

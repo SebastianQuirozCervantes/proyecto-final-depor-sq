@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="flecha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <style>
+      .titulo { font-size: 15px; font-weight: 700; fill: #0f172a; }
+      .sub { font-size: 12px; fill: #334155; }
+      .peq { font-size: 11px; fill: #475569; }
+      .col { font-size: 13px; font-weight: 700; fill: #64748b; letter-spacing: 1px; }
+      .linea { stroke: #475569; stroke-width: 2; fill: none; marker-end: url(#flecha); }
+      .punteada { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; marker-end: url(#flecha); }
+    </style>
+  </defs>
+
+  <rect width="1200" height="600" fill="#ffffff"/>
+
+  <!-- Encabezados de columna -->
+  <text x="95" y="32" class="col" text-anchor="middle">1 · FUENTES</text>
+  <text x="365" y="32" class="col" text-anchor="middle">ORQUESTACIÓN</text>
+  <text x="620" y="32" class="col" text-anchor="middle">2 · STAGING</text>
+  <text x="860" y="32" class="col" text-anchor="middle">3-4 · WAREHOUSE + dbt</text>
+  <text x="1095" y="32" class="col" text-anchor="middle">5 · CONSUMO</text>
+
+  <!-- Fuentes -->
+  <rect x="15" y="60" width="160" height="90" rx="10" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.5"/>
+  <text x="95" y="88" class="titulo" text-anchor="middle">API de partidos</text>
+  <text x="95" y="108" class="sub" text-anchor="middle">football-data.org v4</text>
+  <text x="95" y="126" class="peq" text-anchor="middle">token · 10 req/min</text>
+  <text x="95" y="141" class="peq" text-anchor="middle">(mock local en Docker)</text>
+
+  <rect x="15" y="185" width="160" height="90" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="95" y="213" class="titulo" text-anchor="middle">SFTP proveedor GPS</text>
+  <text x="95" y="233" class="peq" text-anchor="middle">carga_fisica_AAAAMMDD.csv</text>
+  <text x="95" y="251" class="peq" text-anchor="middle">1 archivo diario</text>
+  <text x="95" y="266" class="peq" text-anchor="middle">~1,5 % filas sucias</text>
+
+  <rect x="15" y="310" width="160" height="90" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <text x="95" y="338" class="titulo" text-anchor="middle">MySQL taquilla</text>
+  <text x="95" y="358" class="sub" text-anchor="middle">base heredada on-prem</text>
+  <text x="95" y="376" class="peq" text-anchor="middle">ventas_entradas</text>
+  <text x="95" y="391" class="peq" text-anchor="middle">incremental (updated_at)</text>
+
+  <!-- Airflow -->
+  <rect x="225" y="50" width="280" height="370" rx="12" fill="#f1f5f9" stroke="#017cee" stroke-width="2"/>
+  <text x="365" y="76" class="titulo" text-anchor="middle">Apache Airflow 2.10</text>
+  <text x="365" y="94" class="peq" text-anchor="middle">deporte_ingesta_diaria · 06:00 Lima · catchup=False</text>
+
+  <rect x="240" y="108" width="250" height="62" rx="8" fill="#ffffff" stroke="#94a3b8"/>
+  <text x="365" y="130" class="sub" text-anchor="middle" font-weight="700">TaskGroup ingesta_api_partidos</text>
+  <text x="365" y="148" class="peq" text-anchor="middle">Dynamic Task Mapping por competición</text>
+  <text x="365" y="162" class="peq" text-anchor="middle">429 → Retry-After · 401 → falla sin reintento</text>
+
+  <rect x="240" y="180" width="250" height="78" rx="8" fill="#ffffff" stroke="#94a3b8"/>
+  <text x="365" y="202" class="sub" text-anchor="middle" font-weight="700">TaskGroup ingesta_sftp_gps</text>
+  <text x="365" y="220" class="peq" text-anchor="middle">SFTPSensor mode="reschedule"</text>
+  <text x="365" y="234" class="peq" text-anchor="middle">mapping por archivo pendiente</text>
+  <text x="365" y="248" class="peq" text-anchor="middle">validación → cuarentena</text>
+
+  <rect x="240" y="268" width="250" height="62" rx="8" fill="#ffffff" stroke="#94a3b8"/>
+  <text x="365" y="290" class="sub" text-anchor="middle" font-weight="700">TaskGroup ingesta_mysql_taquilla</text>
+  <text x="365" y="308" class="peq" text-anchor="middle">marca de agua en Variable</text>
+  <text x="365" y="322" class="peq" text-anchor="middle">avanza solo tras cargar</text>
+
+  <rect x="240" y="342" width="250" height="62" rx="8" fill="#dbeafe" stroke="#017cee"/>
+  <text x="365" y="364" class="sub" text-anchor="middle" font-weight="700">TriggerDagRunOperator</text>
+  <text x="365" y="382" class="peq" text-anchor="middle">→ deporte_transformacion_dbt</text>
+  <text x="365" y="396" class="peq" text-anchor="middle">(Cosmos DbtTaskGroup)</text>
+
+  <!-- MinIO -->
+  <rect x="545" y="108" width="150" height="222" rx="10" fill="#fce7f3" stroke="#db2777" stroke-width="1.5"/>
+  <text x="620" y="134" class="titulo" text-anchor="middle">MinIO (S3)</text>
+  <text x="620" y="152" class="sub" text-anchor="middle">bucket deporte-raw</text>
+  <text x="620" y="180" class="peq" text-anchor="middle">api/partidos/…</text>
+  <text x="620" y="198" class="peq" text-anchor="middle">gps/crudo/…</text>
+  <text x="620" y="216" class="peq" text-anchor="middle">mysql/taquilla/…</text>
+  <text x="620" y="234" class="peq" text-anchor="middle">cuarentena/ (30 días)</text>
+  <text x="620" y="252" class="peq" text-anchor="middle">gps/_control/ (marcas)</text>
+  <text x="620" y="282" class="peq" text-anchor="middle">lifecycle + versionado</text>
+  <text x="620" y="298" class="peq" text-anchor="middle">usuario de mínimo</text>
+  <text x="620" y="312" class="peq" text-anchor="middle">privilegio</text>
+
+  <!-- Snowflake + dbt -->
+  <rect x="735" y="50" width="250" height="370" rx="12" fill="#ecfeff" stroke="#0891b2" stroke-width="2"/>
+  <text x="860" y="76" class="titulo" text-anchor="middle">Snowflake · DEPORTE_DB</text>
+  <text x="860" y="94" class="peq" text-anchor="middle">DEPORTE_WH XSMALL · AUTO_SUSPEND 60s</text>
+
+  <rect x="755" y="108" width="210" height="44" rx="7" fill="#ffffff" stroke="#0891b2"/>
+  <text x="860" y="127" class="sub" text-anchor="middle" font-weight="700">RAW</text>
+  <text x="860" y="143" class="peq" text-anchor="middle">VARCHAR + _LOTE_ID (idempotente)</text>
+
+  <rect x="755" y="170" width="210" height="44" rx="7" fill="#ffffff" stroke="#0891b2"/>
+  <text x="860" y="189" class="sub" text-anchor="middle" font-weight="700">STAGING (dbt · views)</text>
+  <text x="860" y="205" class="peq" text-anchor="middle">tipos · dedupe · sRPE</text>
+
+  <rect x="755" y="232" width="210" height="44" rx="7" fill="#ffffff" stroke="#0891b2"/>
+  <text x="860" y="251" class="sub" text-anchor="middle" font-weight="700">INTERMEDIATE</text>
+  <text x="860" y="267" class="peq" text-anchor="middle">ACWR · resultado/puntos · taquilla</text>
+
+  <rect x="755" y="294" width="210" height="58" rx="7" fill="#cffafe" stroke="#0891b2"/>
+  <text x="860" y="313" class="sub" text-anchor="middle" font-weight="700">MARTS (tablas)</text>
+  <text x="860" y="329" class="peq" text-anchor="middle">fct_rendimiento_partido</text>
+  <text x="860" y="343" class="peq" text-anchor="middle">mart_riesgo_lesion · tabla_posiciones</text>
+
+  <text x="860" y="378" class="peq" text-anchor="middle">~60 tests dbt (unique, not_null,</text>
+  <text x="860" y="392" class="peq" text-anchor="middle">relationships, accepted_values,</text>
+  <text x="860" y="406" class="peq" text-anchor="middle">valor_en_rango, singulares)</text>
+
+  <!-- Consumo -->
+  <rect x="1025" y="108" width="160" height="80" rx="10" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="1105" y="134" class="titulo" text-anchor="middle">Reporte diario</text>
+  <text x="1105" y="154" class="peq" text-anchor="middle">Markdown en MinIO</text>
+  <text x="1105" y="170" class="peq" text-anchor="middle">deporte-reportes/diario/</text>
+
+  <rect x="1025" y="210" width="160" height="80" rx="10" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="1105" y="236" class="titulo" text-anchor="middle">SQL / dashboard</text>
+  <text x="1105" y="256" class="peq" text-anchor="middle">analyses/</text>
+  <text x="1105" y="272" class="peq" text-anchor="middle">consultas_negocio.sql</text>
+
+  <rect x="1025" y="312" width="160" height="80" rx="10" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="1105" y="338" class="titulo" text-anchor="middle">Cuerpo técnico</text>
+  <text x="1105" y="358" class="peq" text-anchor="middle">y gerencia</text>
+  <text x="1105" y="374" class="peq" text-anchor="middle">comercial</text>
+
+  <!-- Flechas -->
+  <path class="linea" d="M175,105 L238,139"/>
+  <path class="linea" d="M175,230 L238,219"/>
+  <path class="linea" d="M175,355 L238,299"/>
+  <path class="linea" d="M490,180 L543,200"/>
+  <path class="linea" d="M490,219 L543,219"/>
+  <path class="linea" d="M490,280 L543,240"/>
+  <path class="linea" d="M695,180 L753,130"/>
+  <path class="linea" d="M860,152 L860,168"/>
+  <path class="linea" d="M860,214 L860,230"/>
+  <path class="linea" d="M860,276 L860,292"/>
+  <path class="linea" d="M965,323 C1000,323 1000,148 1023,148"/>
+  <path class="linea" d="M965,330 L1023,250"/>
+  <path class="linea" d="M1105,290 L1105,310"/>
+  <path class="punteada" d="M490,373 C620,420 700,380 753,330"/>
+
+  <!-- CI/CD -->
+  <rect x="15" y="450" width="1170" height="130" rx="12" fill="#f8fafc" stroke="#334155" stroke-width="1.5"/>
+  <text x="35" y="478" class="titulo">GitHub · flujo Pull Request → CI → merge → CD</text>
+  <rect x="35" y="492" width="200" height="70" rx="8" fill="#ffffff" stroke="#94a3b8"/>
+  <text x="135" y="518" class="sub" text-anchor="middle" font-weight="700">Rama feature + PR</text>
+  <text x="135" y="538" class="peq" text-anchor="middle">Branch Protection en main</text>
+  <rect x="270" y="492" width="420" height="70" rx="8" fill="#ffffff" stroke="#94a3b8"/>
+  <text x="480" y="518" class="sub" text-anchor="middle" font-weight="700">CI (GitHub Actions, en cada PR)</text>
+  <text x="480" y="538" class="peq" text-anchor="middle">ruff · pytest lógica de negocio · integridad de DAGs</text>
+  <text x="480" y="553" class="peq" text-anchor="middle">dbt parse · docker compose config + build</text>
+  <rect x="725" y="492" width="200" height="70" rx="8" fill="#ffffff" stroke="#94a3b8"/>
+  <text x="825" y="518" class="sub" text-anchor="middle" font-weight="700">Merge a main</text>
+  <text x="825" y="538" class="peq" text-anchor="middle">solo con CI en verde</text>
+  <rect x="960" y="492" width="205" height="70" rx="8" fill="#ffffff" stroke="#94a3b8"/>
+  <text x="1062" y="518" class="sub" text-anchor="middle" font-weight="700">CD: dbt build</text>
+  <text x="1062" y="538" class="peq" text-anchor="middle">Environment "produccion"</text>
+  <text x="1062" y="553" class="peq" text-anchor="middle">Secrets de Snowflake</text>
+  <path class="linea" d="M235,527 L268,527"/>
+  <path class="linea" d="M690,527 L723,527"/>
+  <path class="linea" d="M925,527 L958,527"/>
+</svg>

@@ -1,0 +1,44 @@
+version: 2
+
+models:
+  - name: int_partidos_club
+    description: Partidos finalizados desde la perspectiva del club, con resultado y puntos.
+    meta: {owner: analitica_deportiva, capa: intermediate}
+    columns:
+      - name: partido_id
+        tests: [unique, not_null]
+      - name: resultado
+        tests:
+          - accepted_values: {values: ["G", "E", "P"]}
+      - name: puntos
+        tests:
+          - accepted_values: {values: [0, 1, 3], quote: false}
+
+  - name: int_carga_diaria_jugador
+    description: Serie diaria continua por jugador con carga aguda, crónica y ACWR.
+    meta: {owner: rendimiento_fisico, capa: intermediate}
+    columns:
+      - name: acwr
+        tests:
+          - valor_en_rango:
+              minimo: 0
+              maximo: 4
+              config:
+                severity: warn
+      - name: nivel_riesgo
+        tests:
+          - accepted_values:
+              values: ["SIN_HISTORIA", "ALTO", "MODERADO", "BAJA_CARGA", "OPTIMO"]
+    tests:
+      - combinacion_unica:
+          columnas: ["jugador_id", "fecha"]
+
+  - name: int_taquilla_por_partido
+    description: Entradas, ocupación y recaudación por partido de local.
+    meta: {owner: gerencia_comercial, capa: intermediate}
+    columns:
+      - name: fecha_partido
+        tests: [unique, not_null]
+      - name: ocupacion
+        tests:
+          - valor_en_rango: {minimo: 0, maximo: 1}

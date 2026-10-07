@@ -1,0 +1,73 @@
+version: 2
+
+models:
+  - name: fct_rendimiento_partido
+    description: >
+      {{ doc('fct_rendimiento_partido') }}
+    meta:
+      owner: analitica_deportiva
+      capa: marts
+      consumidores: [cuerpo_tecnico, gerencia_comercial]
+    columns:
+      - name: partido_id
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('stg_api__partidos')
+              field: partido_id
+      - name: resultado
+        description: "{{ doc('resultado') }}"
+        tests:
+          - accepted_values: {values: ["G", "E", "P"]}
+      - name: puntos
+        tests: [not_null]
+      - name: carga_equipo_7d_previa
+        description: "{{ doc('carga_interna') }} Suma del plantel en los 7 días previos al partido."
+      - name: ocupacion
+        description: "{{ doc('ocupacion') }}"
+        tests:
+          - valor_en_rango: {minimo: 0, maximo: 1}
+      - name: recaudacion_neta
+        description: "{{ doc('recaudacion_neta') }}"
+
+  - name: mart_riesgo_lesion
+    description: Semáforo de riesgo de lesión por jugador (último día disponible) con recomendación.
+    meta:
+      owner: rendimiento_fisico
+      capa: marts
+      consumidores: [preparador_fisico, cuerpo_medico]
+    columns:
+      - name: jugador_id
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('dim_jugadores')
+              field: jugador_id
+      - name: acwr
+        description: "{{ doc('acwr') }}"
+      - name: nivel_riesgo
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["SIN_HISTORIA", "ALTO", "MODERADO", "BAJA_CARGA", "OPTIMO"]
+
+  - name: mart_tabla_posiciones
+    description: Tabla de posiciones de la Liga Andina por temporada.
+    meta: {owner: analitica_deportiva, capa: marts}
+    tests:
+      - combinacion_unica:
+          columnas: ["temporada_inicio", "equipo_id"]
+    columns:
+      - name: posicion
+        tests:
+          - not_null
+          - valor_en_rango: {minimo: 1, maximo: 20}
+
+  - name: dim_jugadores
+    description: Dimensión del plantel con edad y descripción de posición.
+    meta: {owner: secretaria_tecnica, capa: marts}
+    columns:
+      - name: jugador_id
+        tests: [unique, not_null]

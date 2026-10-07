@@ -1,0 +1,4 @@
+# Paquetes extra para la imagen de Airflow (se instalan respetando las
+# constraints oficiales de Airflow 2.10.5 / Python 3.11).
+# Los providers de amazon, sftp, mysql, http y snowflake ya vienen en la imagen.
+astronomer-cosmos==1.10.1

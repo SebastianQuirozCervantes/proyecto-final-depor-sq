@@ -1,0 +1,234 @@
+# =====================================================================
+# DeporData — entorno local completo
+#   Airflow (LocalExecutor) + MinIO + SFTP + MySQL heredado + mock de la API
+#   + simulador del proveedor GPS. Snowflake es el único servicio en la nube.
+#
+# Uso:  cp .env.example .env   (y completar)  ->  docker compose up -d --build
+# Todas las credenciales salen del archivo .env (que NO se sube a Git) y se
+# inyectan como Connections de Airflow mediante variables AIRFLOW_CONN_*.
+# =====================================================================
+
+x-airflow-common: &airflow-common
+  build: .
+  image: deporte-airflow:local
+  # No se usa env_file: cada contenedor recibe SOLO las variables que necesita
+  # (Airflow nunca ve, por ejemplo, la clave root de MySQL o de MinIO).
+  environment: &airflow-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${POSTGRES_PASSWORD}@postgres/airflow
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "false"
+    AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
+    # Cosmos: caché del dbt ls para no re-parsear el proyecto en cada ciclo.
+    AIRFLOW__COSMOS__ENABLE_CACHE: "true"
+    PYTHONPATH: /opt/airflow
+    AIRFLOW_ADMIN_USER: ${AIRFLOW_ADMIN_USER}
+    AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD}
+    # --- Variables que lee profiles.yml de dbt con env_var() ---
+    SNOWFLAKE_ACCOUNT: ${SNOWFLAKE_ACCOUNT}
+    SNOWFLAKE_USER: ${SNOWFLAKE_USER}
+    SNOWFLAKE_PASSWORD: ${SNOWFLAKE_PASSWORD}
+    SNOWFLAKE_ROLE: ${SNOWFLAKE_ROLE}
+    SNOWFLAKE_WAREHOUSE: ${SNOWFLAKE_WAREHOUSE}
+    SNOWFLAKE_DATABASE: ${SNOWFLAKE_DATABASE}
+    SNOWFLAKE_SCHEMA: ${SNOWFLAKE_SCHEMA}
+    # --- Connections (las credenciales viven aquí, nunca en el código) ---
+    AIRFLOW_CONN_FOOTBALL_API: >-
+      {"conn_type": "http", "host": "${FOOTBALL_API_HOST}", "password": "${FOOTBALL_API_TOKEN}"}
+    AIRFLOW_CONN_MINIO_DEPORTE: >-
+      {"conn_type": "aws", "login": "${MINIO_AIRFLOW_ACCESS_KEY}", "password": "${MINIO_AIRFLOW_SECRET_KEY}",
+       "extra": {"endpoint_url": "http://minio:9000", "region_name": "us-east-1"}}
+    AIRFLOW_CONN_SFTP_RENDIMIENTO: >-
+      {"conn_type": "sftp", "host": "sftp", "port": 22, "login": "${SFTP_USER}", "password": "${SFTP_PASSWORD}",
+       "extra": {"no_host_key_check": "true"}}
+    AIRFLOW_CONN_MYSQL_TAQUILLA: >-
+      {"conn_type": "mysql", "host": "mysql", "port": 3306, "schema": "taquilla",
+       "login": "${MYSQL_READER_USER}", "password": "${MYSQL_READER_PASSWORD}"}
+    AIRFLOW_CONN_SNOWFLAKE_DEPORTE: >-
+      {"conn_type": "snowflake", "login": "${SNOWFLAKE_USER}", "password": "${SNOWFLAKE_PASSWORD}", "schema": "RAW",
+       "extra": {"account": "${SNOWFLAKE_ACCOUNT}", "warehouse": "${SNOWFLAKE_WAREHOUSE}",
+                 "database": "${SNOWFLAKE_DATABASE}", "role": "${SNOWFLAKE_ROLE}"}}
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./include:/opt/airflow/include
+    - ./dbt:/opt/airflow/dbt
+    - ./logs:/opt/airflow/logs
+  user: "${AIRFLOW_UID:-50000}:0"
+  depends_on: &airflow-depends-on
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        mkdir -p /opt/airflow/logs
+        chmod -R 777 /opt/airflow/logs
+        airflow db migrate
+        airflow users create --role Admin --username "$${AIRFLOW_ADMIN_USER}" --password "$${AIRFLOW_ADMIN_PASSWORD}" \
+          --firstname Admin --lastname DeporData --email admin@deporte.local || true
+    user: "0:0"
+    restart: "no"
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  # El triggerer ejecuta los sensores/operadores en modo deferrable.
+  airflow-triggerer:
+    <<: *airflow-common
+    command: triggerer
+    restart: always
+    depends_on:
+      <<: *airflow-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  # ---------------- Object storage intermedio (S3 compatible) ----------------
+  # MinIO dejó de publicar imágenes oficiales en Docker Hub (2025); se usa la
+  # compilación comunitaria de Pigsty, que es el mismo binario de MinIO.
+  minio:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      retries: 10
+    restart: always
+
+  minio-init:
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
+    entrypoint: ["/bin/sh", "/init.sh"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_AIRFLOW_ACCESS_KEY: ${MINIO_AIRFLOW_ACCESS_KEY}
+      MINIO_AIRFLOW_SECRET_KEY: ${MINIO_AIRFLOW_SECRET_KEY}
+    volumes:
+      - ./infra/minio/init.sh:/init.sh:ro
+      - ./infra/minio/politica_airflow.json:/politica_airflow.json:ro
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+
+  # ---------------- Fuente 1: API de partidos (mock de football-data.org) ----
+  mock-api:
+    image: python:3.11-slim
+    command: ["python", "/app/mock_api/server.py"]
+    environment:
+      # Por defecto el mock acepta el mismo token de la Connection; definir
+      # MOCK_API_TOKEN distinto en .env sirve para demostrar el error 403.
+      MOCK_API_TOKEN: ${MOCK_API_TOKEN:-${FOOTBALL_API_TOKEN}}
+      MOCK_API_LIMITE_POR_MINUTO: "10"
+    volumes:
+      - ./simulators:/app:ro
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      retries: 5
+    restart: always
+
+  # ---------------- Fuente 2: SFTP del proveedor GPS -------------------------
+  sftp:
+    image: atmoz/sftp:alpine
+    command: "${SFTP_USER}:${SFTP_PASSWORD}:1001"
+    volumes:
+      - gps-entregas:/home/${SFTP_USER}/upload/gps
+    ports:
+      - "2222:22"
+    restart: always
+
+  gps-generator:
+    image: python:3.11-slim
+    command: ["python", "/app/gps_generator/generator.py"]
+    environment:
+      GPS_OUTPUT_DIR: /data/gps
+      GPS_DIAS_HISTORIA: "42"
+    volumes:
+      - ./simulators:/app:ro
+      - gps-entregas:/data/gps
+    restart: always
+
+  # ---------------- Fuente 3: base MySQL heredada de taquilla ----------------
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_READER_USER: ${MYSQL_READER_USER}
+      MYSQL_READER_PASSWORD: ${MYSQL_READER_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./infra/mysql:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      retries: 10
+    restart: always
+
+volumes:
+  postgres-db:
+  minio-data:
+  mysql-data:
+  gps-entregas:
